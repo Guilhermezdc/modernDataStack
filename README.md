@@ -75,11 +75,15 @@ Docker & Docker Compose (V2 preferível)
 
 Git & Python 3.9+
 
-Memória: Mínimo 8GB RAM (12GB+ recomendado)
+Memória: Mínimo 8GB RAM (24GB+ recomendado)
 
 ### 1) Iniciar PostgreSQL (Docker Compose)
 
-Antes de tudo você precisar de criar um arquivo .envS
+Antes de tudo você precisar de criar um arquivo .env neste modelo.
+
+```yaml
+AIRFLOW_UID=1000
+```
 
 Suba o banco de dados:
 
@@ -185,25 +189,40 @@ analytics_platform:
 ```
 Verifique a conexão:
 
-bash
-Copiar código
+```bash
 dbt debug
+```
 Rodar modelos:
 
-bash
-Copiar código
+```bash
 dbt run
 dbt test
 dbt docs generate
 dbt docs serve
+```
 
 ## 🔁 PIPELINES — Fluxo dos dados
+
 Ingestão
+
 Airbyte extrai dados de APIs / DBs e grava no schema raw do Postgres:
+
 analytics.raw.*
 
 Transformação
+
 dbt cria camadas:
+
+> Criamos nas macros do dbt um código jinja que pega o schema do target de forma automatica: 
+```sql 
+{% macro generate_schema_name(custom_schema_name, node) -%}
+    {%- if custom_schema_name is none -%}
+        {{ target.schema }}
+    {%- else -%}
+        {{ custom_schema_name | lower }}
+    {%- endif -%}
+{%- endmacro %}
+```
 
 staging (stg_*) — limpeza e padronização
 
@@ -227,8 +246,9 @@ Copiar código
 Airbyte Sync → dbt run → dbt test → (alerts)
 
 ## 🧱 DBT — Como modelar
+
 Estrutura sugerida
-pgsql
+```pgsql
 Copiar código
 models/
   staging/
@@ -237,6 +257,7 @@ models/
   marts/
     dim_customers.sql
     fact_orders.sql
+```
 Boas práticas
 Use ref() e evite hard-coded table names.
 
@@ -289,7 +310,7 @@ Usar o requests para chamar a API do Airbyte (start sync / check job status)
 
 Usar DockerOperator ou KubernetesPodOperator para rodar dbt de forma isolada
 
-📊 DATA — Fontes de dados
+## 📊 DATA — Fontes de dados
 Este projeto suporta:
 
 REST APIs (ex.: JSON públicos)

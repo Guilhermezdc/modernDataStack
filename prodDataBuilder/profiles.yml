@@ -1,0 +1,23 @@
+prodDataBuilder:
+  target: prod
+  outputs:
+    dev:
+      type: postgres
+      ***REMOVED***
+      ***REMOVED***
+      ***REMOVED***
+      ***REMOVED***
+      ***REMOVED***
+      schema: ""   # <- destino padrão (transformações)
+      threads: 4
+      keepalives_idle: 0
+
+    prod:
+      type: postgres
+      host: "10.0.0.55"
+      ***REMOVED***
+      ***REMOVED***
+      ***REMOVED***
+      ***REMOVED***
+      schema: ''  # <- idem
+      threads: 8

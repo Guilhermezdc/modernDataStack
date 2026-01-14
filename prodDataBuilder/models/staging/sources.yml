@@ -1,0 +1,534 @@
+version: 2
+
+sources:
+  - name: raw_producao
+    description: "Sistema de produção - dados brutos"
+    database: datalake  # Substitua pelo nome real do seu database
+    schema: raw_producao      # Substitua pelo schema real
+
+    tables:
+      - name: tb_processos
+        description: "Tabela bruta de processos do sistema de produção"
+        identifier: "tb_processos"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+          - name: id_cliente
+            description: "ID único do cliente. JOIN > tb_clientes"
+            tests:
+              - not_null
+              - relationships:
+                    to: source('raw_producao', 'tb_clientes')
+                    field: id
+          - name: id_servico
+            description: "ID único da serviço. JOIN > tb_servico"
+            tests:
+              - not_null
+              - relationships:
+                    to: source('raw_producao', 'tb_servicos')
+                    field: id
+          - name: ait
+            description: "AIT da infração relacionada ao processo"
+          - name: placa
+            description: "Placa do veículo relacionada ao processo"
+          - name: uf_placa
+            description: "ID da UF relacionada a placa. JOIN > tb_estados"
+          - name: id_orgao
+            description: "ID do órgão de trânsito relacionado ao processo. JOIN > tb_orgaos"
+
+      - name: tb_servicos
+        description: "Tabela dimensão com os serviços do processo"
+        identifier: "tb_servicos"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do serviço"
+            tests:
+              - unique
+              - not_null
+          - name: descricao
+            description: "Descrição do serviço"
+          - name: servicoexclusivo
+            description: "Array de ID's de sedes onde este serviço é exclusivo"
+          - name: desconto_servico_adm
+            description: "Porcentagem máxima de desconto"
+          - name: desconto_servico_col
+            description: ""
+          - name: desconto_servico_adm_bh
+            description: ""
+          - name: desconto_servico_adm_sg
+            description: ""
+          - name: desconto_servico_adm_siga
+            description: ""
+          - name: prazo_max_limite
+            description: "Intervalo máximo de consulta por dia"
+          - name: exibiremfiltros
+            description: ""
+          - name: campos
+            description: ""
+          - name: status_servicos
+            description: ""
+          - name: bloquear_cadastro_intempestivo
+            description: "Booleano para verificar se o usuario pode cadastrar processo com data limite abaixo do dia atual"
+
+
+      - name: tb_sedes
+        description: "Tabela com todas as sedes"
+        identifier: "tb_sedes"
+
+        columns:
+          - name: id
+            description: "ID único das sedes"
+            tests:
+              - unique
+              - not_null
+          - name: sede
+            description: "Nome da sede"
+            tests:
+                - not_null
+          - name: id_cliente_bolsa
+            description: "ID usuario que tem acesso ao bolsa de leads"
+            tests:
+              - relationships:
+                    to: source('raw_producao', 'tb_usuarios')
+                    field: id
+          - name: abreviacao
+            description: "Abreviação do nome da sede"
+          - name: legenda
+            description: ""
+          - name: limite_vt
+            description: ""
+          - name: cnpj
+            description: "CNPJ da sede"
+          - name: id_sede_status
+            description: "Booleano para verificar se a sede estar ativo ou inativa"
+            tests:
+              - not_null
+          - name: cep
+            description: "CEP da sede"
+          - name: cep_fim
+            description: ""
+          - name: cep_inicio
+            description: ""
+          - name: latitude
+            description: ""
+          - name: longitude
+            description: ""
+          - name: data_inicio_contrato
+            description: "Data do inicio do contrato com a SÓ Multas"
+          - name: data_inicio_operacao
+            description: "Inicio da operação"
+          - name: data_fim_operacao
+            description: "Fim da operação"
+          - name: operador
+            description: "pessoa responsável pela operação"
+            tests:
+              - relationships:
+                    to: source('raw_producao', 'tb_usuarios')
+                    field: id
+          - name: is_view_bolsa
+            description: "A sede tem acesso ao bolsa?"
+          - name: id_modelo
+            description: "ID do modelo de negócio da sede"
+            tests:
+              - relationships:
+                    to: source('raw_producao', 'tb_tipos_modelos')
+                    field: id
+          - name: data_mudanca_modelo
+            description: "Data que a sede mudou de modelo"
+      - name: tb_funcao
+        description: "Tabela com os grupos de função dos usuarios"
+        identifier: "tb_funcao"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+          - name: id_sede
+            description: "ID da sede"
+          - name: visualizacao_dados
+            description: ""
+          - name: id_usuario
+            description: "ID do usuario que cadastro essa função"
+          - name: sync_atualizacao
+            description: ""
+          - name: sync_criacao
+            description: "Data da criação da função"
+          - name: cnpj
+            description: "Cnpj atribuido a função"
+          - name: cidade
+            description: "Cidade atribuida a função"
+          - name: id_padrao
+            description: "ID da função padrão que foi cópiada os atributos"
+            tests:
+              - relationships:
+                    to: source('raw_producao', 'tb_funcao_padrao')
+                    field: id
+          - name: descricao
+            description: "Descrição da função"
+          - name: cep
+            description: ""
+          - name: "cep_inicio"
+            description: ""
+          - name: "cep_fim"
+            description: ""
+          - name: latitude
+            description: ""
+          - name: longitude
+            description: ""
+          - name: status
+            description: "Status da função"
+          - name: cep_cliente
+            description: ""
+          - name: cidade_contrato
+            description: ""
+
+      - name: tb_usuarios
+        description: "Tabela com todos os usuarios do SisSM"
+        identifier: "tb_usuarios"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+      - name: tb_processos_eventos
+        description: "Tabela de andamentos por processo"
+        identifier: "tb_processos_eventos"
+
+        columns:
+          - name: id
+            description: "ID único por andamento"
+            tests:
+              - unique
+              - not_null
+          - name: id_processo
+            description: "ID do processo que o andamento foi dado"
+            tests:
+              - relationships:
+                    to: source('raw_producao', 'tb_processos')
+                    field: id
+          - name: status
+            description: "Status do andamento"
+          - name: data_limite
+            description: "Data que o processo deve ser consultado novamento"
+          - name: nome_anexo
+            description: "Anexo enviado para S3/AWS por andamento"
+          - name: observacoes
+            description: "Observação inserida no andamento"
+          - name: id_usuario
+            description: "ID do usuario que deu o andamento"
+            tests:
+              - relationships:
+                  to: source('raw_producao', 'tb_usuarios')
+                  field: id
+          - name: situacao_evento
+            description: "Oque aquele evento faz com o processo"
+    
+
+      - name: tb_processos_tipopgto
+        description: "Tabela com os valores do processo"
+        identifier: "tb_processos_tipopgto"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+
+      - name: tb_valores
+        description: "Tabela com os valores do processo"
+        identifier: "tb_valores"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+      - name: tb_response_api_fipe
+        description: "Tabela com os valores do processo"
+        identifier: "tb_response_api_fipe"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+      - name: tb_categoria_servicos
+        description: "Tabela com os valores do processo"
+        identifier: "tb_categoria_servicos"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+
+      - name: tb_perguntas
+        description: "Tabela com os valores do processo"
+        identifier: "tb_perguntas"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+
+      - name: tb_crm_resultado_lead
+        description: "Tabela com a tradução dos resultados do lead"
+        identifier: "tb_crm_resultado_lead"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+      
+      - name: tb_crm_servicos_clientes
+        description: "Tabela com os registros do serviços dos clientes registrados no CRM"
+        identifier: "tb_crm_servicos_clientes"  # Use se o nome real for diferente
+
+        columns:
+          - name: id
+            description: "ID único do processo"
+            tests:
+              - unique
+              - not_null
+
+      - name: tb_clientes
+        description: "Tabela de clientes"
+        identifier: "tb_clientes"
+        columns:
+          - name: id
+            description: "ID único do cliente"
+            tests:
+              - unique
+              - not_null
+
+
+      - name: tb_processos_agrupados
+        description: "Tabela com o pagamento dos processos agrupados"
+        identifier: "tb_processos_agrupados"
+        columns:
+          - name: id
+            description: "ID único do agrupamento"
+            tests:
+              - unique
+              - not_null
+      
+      - name: tb_transacoes
+        description: "Tabela com informação das transões nas unidade sobre o novo formato de pagamento"
+        identifier: "tb_transacoes"
+        columns:
+          - name: id
+            description: "ID único da transação"
+            tests:
+              - unique
+              - not_null
+
+      - name: tb_orgaos
+        description: "Tabela com todos os orgaos de transito cadastrados no sissm"
+        identifier: "tb_orgaos"
+        columns:
+          - name: id
+            description: "ID único da transação"
+            tests:
+              - unique
+              - not_null
+          - name: descricao
+            description: "Nome de todos os orgaos"
+          - name: abreviacao 
+            description: "Abreviação de todos os orgaos"
+          - name: id_estado
+            description: "ID do estado correspondente do orgão"
+          - name: id_tipo
+            description: ""
+          - name: status
+            description: ""
+
+      - name: tb_crm_log_clientes
+        description: "Tabela de logs de leads no CRM"
+        identifier: "tb_crm_log_clientes"
+        columns:
+          - name: id
+            description: "ID único do lead"
+            tests:
+              - unique
+              - not_null
+
+      - name: tb_qualificacao_rds
+        description: "Tabela de leads que foram convertidos no RD Station"
+        identifier: "tb_qualificacao_rds"
+        columns:
+          - name: id
+            description: "ID único da conversao"
+            tests:
+              - unique
+              - not_null
+      
+      - name: origem
+        description: "Tabela as origens de lead"
+        identifier: "origem"
+        columns:
+          - name: id
+            description: "ID único do lead"
+            tests:
+              - unique
+              - not_null
+
+
+      - name: tb_crm_clientes
+        description: "Tabela de leads no CRM"
+        identifier: "tb_crm_clientes"
+        columns:
+          - name: id
+            description: "ID único do lead"
+            tests:
+              - unique
+              - not_null
+
+        # Metadados para carga (se aplicável)
+        meta:
+          loaded_at_field: _loaded_at
+
+  - name: raw_bolsa
+    description: "Bolsa de leads - dados brutos"
+    database: datalake  # Substitua pelo nome real do seu database
+    schema: raw_bolsa      # Substitua pelo schema real
+
+    tables:
+
+      - name: tb_bol_lances
+        description: "Tabela de leads do bolsa"
+        identifier: "tb_bol_lances"
+        columns:
+          - name: id
+            description: "ID único do lead no bolsa"
+            tests:
+              - unique
+              - not_null
+
+          - name: valor
+            description: "Valor base do lead"
+          - name: timeout
+            description: "Horário que o lead saiu do bolsa"
+          - name: timeout_exclusivo
+            description: "Horário que o lead perdeo exclusividade para um unidade"
+          - name: cidade
+            description: "Cidade de origem do lead"
+          - name: nome_cliente
+            description: "Nome do lead"
+          - name: estado
+            description: "Estado de origem do lead"
+          - name: id_user
+            description: ""
+          - name: ci_autuacao
+            description: "TAG que o lead foi leiloado"
+          - name: id_sede
+            description: ""
+          - name: id_crm
+            description: "ID crm do lead"
+            tests:
+              - relationships:
+                  to: source('raw_producao', 'tb_crm_clientes')
+                  field: id
+          - name: id_lance_grupo
+            description: "ID dos lances"
+            tests:
+              - relationships:
+                  to: source('raw_bolsa', 'tb_bol_lances_grupo')
+                  field: id
+
+      - name: tb_bol_lances_grupo
+        description: "Tabela com o lance vencedor"
+        identifier: "tb_bol_lances_grupo"
+        columns:
+          - name: id
+            description: "ID único vinculado ao lead na bolsa"
+            tests:
+              - relationships:
+                  to: source('raw_bolsa', 'tb_bol_lances')
+                  field: id_lance_grupo
+
+          - name: valor
+            description: "Valor vencedor do leilão"
+          - name: timeout_exclusivo
+            description: "Fim da exclusividade do lead"
+          - name: timeout
+            description: "Tempo final do lead no leilao"
+          - name: nome_cliente
+            description: "Nome do lead"
+          - name: telefone
+            description: "Telefone do cliente"
+          - name: uf
+            description: "Estado de origem do lead"
+          - name: cidade
+            description: "Cidade de origem do lead"
+          - name: tipo_lead
+            description: "Origem do lead"
+          - name: id_status
+            description: ""
+          - name: id_crm_cliente
+            description: "ID lead no crm"
+            tests:
+              - relationships:
+                  to: source('raw_producao', 'tb_crm_clientes')
+                  field: id
+          - name: score
+            description: "Score que o lead atingiu. Quanto maior, maior o valor do lead"
+
+      - name: tb_bol_lances_cli
+        description: "Tabela com todos os lances do lead"
+        identifier: "tb_bol_lances_cli"
+        columns:
+          - name: id
+            description: "id do lance"
+          - name: valor_oferta
+            description: "Valor ofertado no lance"
+          - name: data_oferta
+            description: ""
+          - name: id_usuario
+            description: "id do usuario que deu o lance"
+          - name: id_lance
+            description: "id do lance vencedor"
+          - name: id_status
+            description: "status do lance"
+
+
+  - name: raw_nibo
+    description: "Nibo API - dados brutos"
+    database: datalake  # Substitua pelo nome real do seu database
+    schema: raw_nibo      # Substitua pelo schema real
+
+    tables:
+
+      - name: niboreceipts
+        description: "Tabela com todas as transeções na nibo"
+        identifier: "niboreceipts"
+        columns:
+          - name: id
+            description: "ID único do lead no bolsa"
+
+          
+
+

@@ -1,0 +1,39 @@
+services:
+  postgres_dw:
+    image: postgres:latest
+    container_name: postgres_dw
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: analytics
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 2skj(Hk2hksf2
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_dw_data:/var/lib/postgresql/data
+
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=2GB
+      -c work_mem=64MB
+      -c maintenance_work_mem=512MB
+      -c effective_cache_size=6GB
+      -c wal_buffers=16MB
+      -c checkpoint_completion_target=0.9
+      -c random_page_cost=1.1
+      -c max_wal_size=8GB
+      -c min_wal_size=2GB
+      -c log_min_duration_statement=500
+      -c log_statement=ddlS
+      -c log_checkpoints=on
+      -c log_connections=on
+      -c log_disconnections=on
+
+volumes:
+  postgres_dw_data:
+    driver: local
