@@ -9,25 +9,15 @@ Inclui instruções para instalar localmente (Airbyte via `abctl`), orquestrar c
 
 ## 📁 Estrutura final do repositório
 
-stack-modern/
-├── README.md ← Página principal (este arquivo)
-├── ARCHITECTURE.md ← Arquitetura técnica (opcional: separado)
-├── SETUP.md ← Como rodar tudo local (opcional: separado)
-├── PIPELINES.md ← Como os dados fluem (opcional: separado)
-├── DBT.md ← Como você modela dados (opcional: separado)
-├── AIRFLOW.md ← Como você orquestra (opcional: separado)
-├── DATA.md ← Fontes de dados (opcional: separado)
-└── .gitignore
+```md
+## 📂 Pastas principais
 
-markdown
-Copiar código
+- 📁 [`config/`](config) — Configurações do Airflow  
+- 📁 [`dags/`](dags) — DAGs  
+- 📁 [`prodDataBuilder/`](prodDataBuilder) — dbt (models, macros, analyses)  
+- 📄 [`Dockerfile`](Dockerfile)
 
-> **Nota rápida para recrutadores técnicos:** os quatro arquivos que você provavelmente abrirá primeiro são:
-> - `README.md` (este)  
-> - `SETUP.md`  
-> - `ARCHITECTURE.md`  
-> - `DBT.md`  
-
+```
 ---
 
 ## 🧠 ARCHITECTURE — Modern Data Stack
@@ -39,16 +29,29 @@ Este projeto implementa uma **Modern Data Stack** com:
 - **dbt** para transformações
 - **Airflow** para orquestração
 
-### High-level flow
+### 🔄 High-level flow
 
-Source Systems → Airbyte → PostgreSQL (raw)
-                          ↓
-                         dbt
-                          ↓
-                 PostgreSQL (analytics)
-                          ↓
-                     BI / SQL
+```text
+Source Systems
+      │
+      ▼
+   Airbyte
+      │
+      ▼
+PostgreSQL (raw)
+      │
+      ▼
+     dbt
+      │
+      ▼
+PostgreSQL (analytics)
+      │
+      ▼
+   BI / SQL
+```
+
 Layers
+
 Layer	Purpose
 raw	Dados exatamente como ingeridos pelo Airbyte (raw tables)
 staging	Dados limpos e padronizados (stg_*)
@@ -65,89 +68,51 @@ Reprodutibilidade
 
 Modelos prontos para análise
 
-🧰 SETUP — Como rodar local
+## 🧰 SETUP — Instalação Local
+
 Requisitos
-Docker
+Docker & Docker Compose (V2 preferível)
 
-Docker Compose (v2 preferível)
+Git & Python 3.9+
 
-Git
+Memória: Mínimo 8GB RAM (12GB+ recomendado)
 
-Python 3.9+ (para dbt local / utilitários)
+### 1) Iniciar PostgreSQL (Docker Compose)
 
-Pelo menos 8GB de RAM (ideal 12GB+)
+Antes de tudo você precisar de criar um arquivo .envS
 
-1) Iniciar PostgreSQL & Airflow (Docker Compose)
-Crie um arquivo docker-compose.yml no repositório com o conteúdo abaixo (exemplo mínimo):
+Suba o banco de dados:
 
-yaml
-Copiar código
-version: "3.8"
+```bash
+docker-compose -f docker-compose-postgres.yaml up -d
+```
+Depois suba os serviços do airflow:
 
-services:
-  postgres:
-    image: postgres:15
-    container_name: warehouse
-    environment:
-      POSTGRES_USER: analytics
-      POSTGRES_PASSWORD: analytics
-      POSTGRES_DB: analytics
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  airflow:
-    image: apache/airflow:2.8.1
-    container_name: airflow
-    environment:
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__CORE__EXECUTOR: "SequentialExecutor"
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://analytics:analytics@postgres/analytics"
-    depends_on:
-      - postgres
-    ports:
-      - "8080:8080"
-    command: >
-      bash -c "
-      airflow db init &&
-      airflow users create --username admin --password admin --firstname Guilherme --lastname Stefano --role Admin --email admin@example.com &&
-      airflow webserver & airflow scheduler
-      "
-
-volumes:
-  pgdata:
-Suba os serviços:
-
-bash
-Copiar código
+```bash
 docker compose up -d
+```
 Acesse:
 
 Airflow UI: http://localhost:8080 (user: admin / pass: admin)
 
-Postgres: host=localhost, port=5432, user=analytics, password=analytics, db=analytics
+Postgres: host=localhost, port=5432, user=root, password=`2skj(Hk2hksf2`, db=analytics
 
 Observação: para ambientes Docker em Mac/Windows, se precisar que containers acessem serviços host, use host.docker.internal como host para conexões a serviços rodando na máquina host.
 
-2) Instalar e rodar Airbyte via abctl (local)
+### 2) Instalar e rodar Airbyte via abctl (local)
+
 abctl é o instalador CLI oficial do Airbyte para setups locais.
 
 Instalar abctl:
 
-bash
-Copiar código
+```bash
 curl -LsfS https://get.airbyte.com | bash
-Verifique a versão:
-
-bash
-Copiar código
-abctl version
+```
 Instalar Airbyte localmente:
 
-bash
-Copiar código
+```bash
 abctl local install
+```
 Isso:
 
 cria um cluster/local runtime e instala Airbyte (k8s/kit usado pelo abctl)
@@ -156,7 +121,7 @@ expõe UI do Airbyte em http://localhost:8000
 
 Abra http://localhost:8000 e siga o assistente para criar sources e destinations.
 
-3) Conectar Airbyte → PostgreSQL
+### 3) Conectar Airbyte → PostgreSQL
 No Airbyte UI:
 
 Create Destination
@@ -169,9 +134,9 @@ Port: 5432
 
 Database: analytics
 
-User: analytics
+User: root
 
-Password: analytics
+Password: `2skj(Hk2hksf2`
 
 Schema: raw
 
@@ -187,33 +152,37 @@ Modo: incremental quando disponível (CDC) ou full-refresh conforme o caso
 
 Depois do sync, dados aparecerão como analytics.raw.<nome_da_tabela>.
 
-4) Instalar e configurar dbt (local)
+### 4) Instalar e configurar dbt (local)
+
+> Notas: Nesse projeto ao rodar o docker-compose o dbt já é configurado automaticamente, porém, vou deixar uma breve explicação.
 Instale o adaptador Postgres do dbt:
 
-bash
+```bash
 Copiar código
+pip install dbt-core
 pip install dbt-postgres
+```
 Inicie um projeto dbt:
 
-bash
-Copiar código
-dbt init analytics_platform
+```bash
+dbt init prodDataBuilder
 cd analytics_platform
+```
 Exemplo mínimo de profiles.yml (em ~/.dbt/profiles.yml):
 
-yaml
-Copiar código
+```yaml
 analytics_platform:
   target: dev
   outputs:
     dev:
       type: postgres
       host: localhost
-      user: analytics
-      password: analytics
+      user: root
+      password: 2skj(Hk2hksf2
       port: 5432
       dbname: analytics
       schema: analytics
+```
 Verifique a conexão:
 
 bash
@@ -227,7 +196,8 @@ dbt run
 dbt test
 dbt docs generate
 dbt docs serve
-🔁 PIPELINES — Fluxo dos dados
+
+## 🔁 PIPELINES — Fluxo dos dados
 Ingestão
 Airbyte extrai dados de APIs / DBs e grava no schema raw do Postgres:
 analytics.raw.*
@@ -255,7 +225,8 @@ Fluxo lógico:
 text
 Copiar código
 Airbyte Sync → dbt run → dbt test → (alerts)
-🧱 DBT — Como modelar
+
+## 🧱 DBT — Como modelar
 Estrutura sugerida
 pgsql
 Copiar código
