@@ -3,21 +3,21 @@ prodDataBuilder:
   outputs:
     dev:
       type: postgres
-      ***REMOVED***
-      ***REMOVED***
-      ***REMOVED***
-      ***REMOVED***
-      ***REMOVED***
+      host: "locahost"
+      user: "root"
+      password: "2skj(Hk2hksf2"
+      port: 5432
+      dbname: "analytics"
       schema: ""   # <- destino padrão (transformações)
       threads: 4
       keepalives_idle: 0
 
     prod:
       type: postgres
-      host: "10.0.0.55"
-      ***REMOVED***
-      ***REMOVED***
-      ***REMOVED***
-      ***REMOVED***
+      host: "localhost"
+      user: "root"
+      password: "2skj(Hk2hksf2"
+      port: 5432
+      dbname: "analytics"
       schema: ''  # <- idem
       threads: 8
