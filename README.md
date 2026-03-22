@@ -1,324 +1,463 @@
-# 🚀 stack-modern — Modern Data Stack (README principal)
+# 🚀 Modern Data Stack - Production Data Pipeline
 
 **Airbyte • Airflow • dbt • PostgreSQL**
 
-Este repositório demonstra uma **plataforma analítica end-to-end** (production-style) que mostra como times de dados modernos ingere, transforma e serve dados usando uma Modern Data Stack.  
-Inclui instruções para instalar localmente (Airbyte via `abctl`), orquestrar com Airflow e usar Postgres como data warehouse.
+A complete, production-ready Modern Data Stack implementation demonstrating best practices for building scalable data platforms. This project ingests data from multiple sources, transforms it through dbt, and orchestrates everything with Apache Airflow.
 
 ---
 
-## 📁 Estrutura final do repositório
+## 📋 Table of Contents
 
-```md
-## 📂 Pastas principais
+- [Architecture](#-architecture)
+- [Project Structure](#-project-structure)
+- [Quick Start](#-quick-start)
+- [Data Models](#-data-models)
+- [Testing & Quality](#-testing--quality)
+- [Configuration](#-configuration)
+- [Troubleshooting](#-troubleshooting)
 
-- 📁 [`config/`](config) — Configurações do Airflow  
-- 📁 [`dags/`](dags) — DAGs  
-- 📁 [`prodDataBuilder/`](prodDataBuilder) — dbt (models, macros, analyses)  
-- 📄 [`Dockerfile`](Dockerfile)
+---
+
+## 🏗 Architecture
+
+### High-Level Data Flow
 
 ```
----
-
-## 🧠 ARCHITECTURE — Modern Data Stack
-
-Este projeto implementa uma **Modern Data Stack** com:
-
-- **Airbyte** para ingestão
-- **PostgreSQL** como Data Warehouse
-- **dbt** para transformações
-- **Airflow** para orquestração
-
-### 🔄 High-level flow
-
-```text
 Source Systems
       │
       ▼
-   Airbyte
+   Airbyte (Extraction & Loading)
       │
       ▼
-PostgreSQL (raw)
+PostgreSQL - raw schema (Raw Data)
       │
       ▼
-     dbt
+     dbt (Transformation Layer)
+      │
+      ├─▶ staging schema (stg_*) - Data cleaning & standardization
+      │
+      └─▶ mart schema (fact_*, dim_*) - Analytics-ready tables
       │
       ▼
-PostgreSQL (analytics)
+PostgreSQL - mart schema (Analytical Views)
       │
       ▼
-   BI / SQL
+   BI Tools / SQL Analytics
 ```
 
-Layers
+### Technology Stack
 
-Layer	Purpose
-raw	Dados exatamente como ingeridos pelo Airbyte (raw tables)
-staging	Dados limpos e padronizados (stg_*)
-marts	Tabelas analíticas: facts & dimensions otimizadas para BI
+| Component | Purpose | Version |
+|-----------|---------|---------|
+| **PostgreSQL** | Data Warehouse | 15+ |
+| **dbt** | Transformation & Testing | 1.5+ |
+| **Airflow** | Orchestration | 2.6+ |
+| **Airbyte** | Data Integration | Abctl Local |
+| **Docker** | Containerization | V2+ |
 
-Por que essa arquitetura
-Este design alinha com práticas de times de dados reais para garantir:
+### Layers & Schemas
 
-Qualidade de dados
+| Layer | Schema | Purpose | Materialization |
+|-------|--------|---------|-----------------|
+| **Raw** | `raw_producao`, `raw_bolsa`, `raw_nibo` | Exact copy from sources via Airbyte | Tables |
+| **Staging** | `staging` | Cleaned, standardized data | **Views** |
+| **Mart** | `mart` | Analytics-ready facts & dimensions | **Tables** |
 
-Escalabilidade
+---
 
-Reprodutibilidade
+## 📂 Project Structure
 
-Modelos prontos para análise
+```
+modernDataStack/
+├── config/                    # Airflow configuration
+├── dags/                      # Airflow DAG definitions
+│   └── maindags.py           # Main ETL orchestration pipeline
+├── prodDataBuilder/          # dbt project root
+│   ├── dbt_project.yml       # dbt configuration
+│   ├── profiles.yml          # Database connection settings (uses env vars for security)
+│   ├── models/
+│   │   ├── staging/          # Transformation layer 1 (data cleaning)
+│   │   │   ├── stg_*.sql     # Staging models
+│   │   │   └── sources.yml   # Source definitions & column-level tests
+│   │   └── mart/             # Transformation layer 2 (analytical models)
+│   │       ├── fact_*.sql    # Fact tables (events, transactions)
+│   │       ├── dim_*.sql     # Dimension tables (entities)
+│   │       ├── agg_*.sql     # Aggregation tables
+│   │       └── schema.yml    # Mart model documentation & tests
+│   ├── tests/                # Custom SQL tests for data quality
+│   ├── macros/               # dbt macros (reusable SQL functions)
+│   ├── snapshots/            # SCD Type 2 snapshots (currently unused)
+│   └── seeds/                # CSV seed files for dimension data
+├── docker-compose.yaml       # Container orchestration
+├── docker-compose-postgres.yaml  # PostgreSQL container
+├── .env.example              # Environment variable template
+└── README.md                 # This file
+```
 
-## 🧰 SETUP — Instalação Local
+---
 
-Requisitos
-Docker & Docker Compose (V2 preferível)
+## 🚀 Quick Start
 
-Git & Python 3.9+
+### Prerequisites
 
-Memória: Mínimo 8GB RAM (24GB+ recomendado)
+- Docker & Docker Compose V2
+- Git
+- Python 3.9+
+- 8GB RAM minimum (24GB+ recommended)
 
-### 1) Iniciar PostgreSQL (Docker Compose)
+### 1. Set Up Environment Variables
 
-Antes de tudo você precisar de criar um arquivo .env neste modelo.
+```bash
+cp .env.example .env
+```
 
-```yaml
+Edit `.env` with your settings:
+
+```env
 AIRFLOW_UID=1000
+DBT_HOST=localhost
+DBT_USER=root
+DBT_PASSWORD=your_secure_password
+DBT_DBNAME=analytics
+DBT_SCHEMA_DEV=staging
+DBT_SCHEMA_PROD=mart
 ```
 
-Suba o banco de dados:
+### 2. Start PostgreSQL
 
 ```bash
 docker-compose -f docker-compose-postgres.yaml up -d
 ```
-Depois suba os serviços do airflow:
+
+Verify connection:
+```bash
+psql -h localhost -U root -d analytics
+```
+
+### 3. Start Airflow
 
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
-Acesse:
 
-Airflow UI: http://localhost:8080 (user: admin / pass: admin)
+Access UI: http://localhost:8080 (user: admin / pass: admin)
 
-Postgres: host=localhost, port=5432, user=root, password=`2skj(Hk2hksf2`, db=analytics
-
-Observação: para ambientes Docker em Mac/Windows, se precisar que containers acessem serviços host, use host.docker.internal como host para conexões a serviços rodando na máquina host.
-
-### 2) Instalar e rodar Airbyte via abctl (local)
-
-abctl é o instalador CLI oficial do Airbyte para setups locais.
-
-Instalar abctl:
+### 4. Install Airbyte (Local via abctl)
 
 ```bash
 curl -LsfS https://get.airbyte.com | bash
-```
-Instalar Airbyte localmente:
-
-```bash
 abctl local install
 ```
-Isso:
 
-cria um cluster/local runtime e instala Airbyte (k8s/kit usado pelo abctl)
+Access UI: http://localhost:8000
 
-expõe UI do Airbyte em http://localhost:8000
-
-Abra http://localhost:8000 e siga o assistente para criar sources e destinations.
-
-### 3) Conectar Airbyte → PostgreSQL
-No Airbyte UI:
-
-Create Destination
-
-Tipo: PostgreSQL
-
-Host: host.docker.internal ou postgres (se você rodar tudo no mesmo compose e apontar via network)
-
-Port: 5432
-
-Database: analytics
-
-User: root
-
-Password: `2skj(Hk2hksf2`
-
-Schema: raw
-
-Create Source (ex.: API pública, MySQL local, CSV, etc.)
-
-Create Connection
-
-Sync frequency: conforme desejar (manual, hourly, daily)
-
-Namespace / Schema: raw
-
-Modo: incremental quando disponível (CDC) ou full-refresh conforme o caso
-
-Depois do sync, dados aparecerão como analytics.raw.<nome_da_tabela>.
-
-### 4) Instalar e configurar dbt (local)
-
-> Notas: Nesse projeto ao rodar o docker-compose o dbt já é configurado automaticamente, porém, vou deixar uma breve explicação.
-Instale o adaptador Postgres do dbt:
+### 5. Run dbt Transforms
 
 ```bash
-Copiar código
-pip install dbt-core
-pip install dbt-postgres
-```
-Inicie um projeto dbt:
+cd prodDataBuilder
 
-```bash
-dbt init prodDataBuilder
-cd analytics_platform
+# Test connection
+dbt debug
+
+# Run all models
+dbt run
+
+# Run tests
+dbt test
+
+# Generate documentation
+dbt docs generate
+dbt docs serve  # http://localhost:8001
 ```
-Exemplo mínimo de profiles.yml (em ~/.dbt/profiles.yml):
+
+---
+
+## 📊 Data Models
+
+### Staging Models (Raw → Staging)
+
+**Location**: `prodDataBuilder/models/staging/`
+
+Staging models perform:
+- Column renaming & standardization
+- Data type conversions
+- Basic deduplication
+- NULL handling
+
+**Key staging models**:
+- `stg_tb_processos` - Process/case data
+- `stg_tb_crm_clientes` - CRM lead records
+- `stg_tb_sedes` - Branch/office locations
+- `stg_tb_servicos` - Service definitions with classification (AVA+/AVB/AVA)
+- 25+ more staging models
+
+### Mart Models (Staging → Marts)
+
+**Location**: `prodDataBuilder/models/mart/`
+
+#### Fact Tables (Events/Transactions)
+
+1. **`fact_vendas`** - Sales transactions
+   - Combines old & new business models
+   - Matches processes with payment transactions
+   - Includes all columns for sales analytics
+
+2. **`fact_crm_leads`** - CRM lead journey
+   - Tracks lead progression through actions
+   - Maps action IDs: 3,9,15 (entry) → 4,8,22 (exit)
+   - Outputs: Contact Made → Won/Lost/Disputed
+
+3. **`fact_leads_contestados`** - Disputed/contested leads
+   - Tracks dispute flows and resolutions
+   - Complex multi-table joins
+
+4. **`fact_leads_leiloados`** - Auction leads
+   - Leads that went through auction process
+   - Captures winning bids and values
+
+5. **`fact_vendas_bolsa`** - Auction to sales matching
+   - Links auction leads to completed sales
+   - **Lead matching window: 75 days** (configured from sales analysis)
+   - Regional office mapping logic
+
+#### Dimension Tables (Entities)
+
+1. **`dim_crm_leads`** - Customer dimension
+   - Customer attributes (name, contact, location)
+   - Original source: CRM system
+
+---
+
+## ✅ Testing & Quality
+
+### Test Coverage
+
+All models and sources include comprehensive tests:
 
 ```yaml
-analytics_platform:
-  target: dev
-  outputs:
-    dev:
-      type: postgres
-      host: localhost
-      user: root
-      password: 2skj(Hk2hksf2
-      port: 5432
-      dbname: analytics
-      schema: analytics
+tests:
+  - unique         # No duplicate keys
+  - not_null       # Required fields populated
+  - relationships  # Foreign key integrity
+  - accepted_values # Valid enumerated values
+  - dbt_utils.*    # Custom range/expectation tests
 ```
-Verifique a conexão:
+
+### Running Tests
 
 ```bash
-dbt debug
-```
-Rodar modelos:
-
-```bash
-dbt run
+# All tests
 dbt test
+
+# Specific model
+dbt test --select fact_vendas
+
+# Specific test type
+dbt test --select test_type:unique
+```
+
+### Test Configuration
+
+- **Column-level tests**: Defined in `sources.yml` and `schema.yml`
+- **Data freshness**: Tracked via `_loaded_at` metadata fields
+- **Custom tests**: Can be added to `tests/` directory
+
+### Documentation
+
+All models are fully documented:
+
+```bash
 dbt docs generate
 dbt docs serve
 ```
 
-## 🔁 PIPELINES — Fluxo dos dados
+Browse at http://localhost:8001
 
-Ingestão
+---
 
-Airbyte extrai dados de APIs / DBs e grava no schema raw do Postgres:
+## ⚙️ Configuration
 
-analytics.raw.*
+### Environment Variables
 
-Transformação
+Key variables (all in `.env`):
 
-dbt cria camadas:
+```
+# Database
+DBT_HOST          - PostgreSQL host
+DBT_USER          - Database user
+DBT_PASSWORD      - Database password (use secure vault in production)
+DBT_DBNAME        - Database name
+DBT_SCHEMA_DEV    - Development schema
+DBT_SCHEMA_PROD   - Production schema
 
-> Criamos nas macros do dbt um código jinja que pega o schema do target de forma automatica: 
-```sql 
-{% macro generate_schema_name(custom_schema_name, node) -%}
-    {%- if custom_schema_name is none -%}
-        {{ target.schema }}
-    {%- else -%}
-        {{ custom_schema_name | lower }}
-    {%- endif -%}
-{%- endmacro %}
+# Airflow
+AIRFLOW_UID       - Airflow user ID for container permissions
+
+# Airbyte
+AIRBYTE_API_URL   - Airbyte API endpoint (stored securely in Airflow Connections)
 ```
 
-staging (stg_*) — limpeza e padronização
+### dbt Configuration
 
-marts — facts & dims prontos para BI
+**profiles.yml** uses environment variables for credentials:
 
-Orquestração
-Airflow DAG (exemplo) executa em sequência:
-
-Trigger Airbyte sync (via API)
-
-dbt run
-
-dbt test
-
-Notificação / validação
-
-Fluxo lógico:
-
-text
-Copiar código
-Airbyte Sync → dbt run → dbt test → (alerts)
-
-## 🧱 DBT — Como modelar
-
-Estrutura sugerida
-```pgsql
-Copiar código
-models/
-  staging/
-    stg_customers.sql
-    stg_orders.sql
-  marts/
-    dim_customers.sql
-    fact_orders.sql
+```yaml
+outputs:
+  dev:
+    host: "{{ env_var('DBT_HOST', 'localhost') }}"
+    user: "{{ env_var('DBT_USER') }}"
+    password: "{{ env_var('DBT_PASSWORD') }}"
+    threads: 4
+  prod:
+    threads: 8
 ```
-Boas práticas
-Use ref() e evite hard-coded table names.
 
-Separe camadas: staging → marts.
+**dbt_project.yml** defines:
+- Model materialization (views vs tables)
+- Schema naming conventions
+- Seed configurations
 
-Escreva testes (not_null, unique, relationships).
+### Airflow Configuration
 
-Documente modelos com schema.yml.
+**maindags.py** creates a daily pipeline:
 
-Use incremental models quando a fonte permitir.
+1. Triggers Airbyte sync (3 connections in sequence)
+2. Waits for Airbyte job completion (polls every 30 seconds)
+3. Runs `dbt run` to build/refresh all models
+4. Runs `dbt test` for data quality validation
+5. Sends alerts on failure (configurable Slack/email)
 
-Exemplo simples de fact_orders.sql:
+---
 
-sql
-Copiar código
-select
-  order_id,
-  customer_id,
-  order_date,
-  total_amount
-from {{ ref('stg_orders') }}
-Comandos dbt comuns:
+## 📝 Business Logic Documentation
 
-bash
-Copiar código
-dbt run --models marts
-dbt test --models +marts
-dbt docs generate
-⏱ AIRFLOW — Orquestração
-Airflow orquestra a execução dos passos do pipeline. Um DAG típico deve:
+### Magic Numbers & Constants
 
-Fazer chamada à API do Airbyte para iniciar o sync (Airbyte API)
+**Service Classification** (`stg_tb_servicos.sql`):
+- **AVA+** (Premium): Categories {7, 9} or Service IDs {47, 48, 49, 51, 52, 53}
+- **AVB** (Secondary): Categories {1, 5, 10, 11, 12}
+- **AVA** (Standard): All other categories
 
-Aguardar conclusão / checar status
+**Lead Status Mapping** (`fact_crm_leads.sql`):
+- Entry Actions: 3=Contact Made, 9=Interested, 15=Qualified
+- Exit Actions: 4=Lost, 8=Won, 22=Disputed
 
-Executar dbt run (via BashOperator ou DockerOperator)
+**Lead Matching Window** (`fact_vendas_bolsa.sql`):
+- **75-day window**: Sales within 75 days of auction entry are matched
+- Determined by BI team based on historical lead-to-sale patterns
 
-Executar dbt test
+**Branch Mapping** (`fact_vendas_bolsa.sql`):
+- Branch 1 (central) transactions mapped to regional offices 85 or 54 when applicable
 
-Emitir alertas (Slack / email) em caso de falha
+### Data Freshness SLA
 
-DAG flow (visual):
+- **Airbyte syncs**: Every 30 minutes
+- **dbt transforms**: Follow Airbyte completion
+- **Total latency**: ~35-40 minutes (end-to-end)
 
-text
-Copiar código
-airbyte_sync_task -> dbt_run_task -> dbt_test_task -> notify_task
-Observação: para integração Airbyte ↔ Airflow, existem patterns:
+---
 
-Usar o requests para chamar a API do Airbyte (start sync / check job status)
+## 🔍 Troubleshooting
 
-Usar DockerOperator ou KubernetesPodOperator para rodar dbt de forma isolada
+### Connection Issues
 
-## 📊 DATA — Fontes de dados
-Este projeto suporta:
+**dbt connection fails**:
+```bash
+dbt debug
+# Check: DBT_HOST, DBT_USER, DBT_PASSWORD in .env
+# Verify PostgreSQL is running: docker-compose ps
+```
 
-REST APIs (ex.: JSON públicos)
+**Airflow can't reach dbt models**:
+```bash
+# Verify dbt project path in BashOperator
+# Check: DAG log output in Airflow UI
+```
 
-Bancos relacionais (MySQL/Postgres)
+### Data Issues
 
-CSVs / arquivos locais (upload via Airbyte)
+**Missing data in staging**:
+1. Check Airbyte run logs: http://localhost:8000/workspace
+2. Verify sync settings and destination schema
+3. Confirm raw tables exist: `SELECT * FROM raw_producao.tb_processos LIMIT 1;`
 
-Event streams (quando usar Kafka)
+**Test failures**:
+```bash
+dbt test --debug
+# Review specific test failure message
+# Check: are unique/not_null tests passing on source data?
+```
 
-Fluxo: toda fonte → raw → staging → marts → analytics
+### Performance Issues
+
+**Slow dbt run**:
+- Increase threads: Edit `profiles.yml` threads=8 (or higher)
+- Run subset: `dbt run --select staging` (or specific models)
+- Check PostgreSQL slow logs
+
+**Large model materialization**:
+- Consider incremental models for large fact tables
+- Check: Are all models necessary or can some be views?
+
+---
+
+## 📚 Additional Resources
+
+### Documentation
+
+- **dbt Docs**: http://localhost:8001 (after `dbt docs serve`)
+- **Airflow Docs**: http://localhost:8080
+- **Data Lineage**: Available in dbt docs under "DAG" tab
+
+### dbt Best Practices Used
+
+✅ ref() for model dependencies
+✅ Column-level testing (unique, not_null, relationships)
+✅ Documentation via YAML schema files
+✅ Staging → Marts layered architecture
+✅ Meaningful naming (stg_, fact_, dim_)
+✅ Config blocks for materialization
+
+### Git Workflow
+
+```bash
+git status
+git add prodDataBuilder/ dags/
+git commit -m "Refactor: improve data quality tests and documentation"
+git push origin main
+```
+
+---
+
+## 🔐 Security Best Practices
+
+✅ Credentials in `.env` (not in code)
+✅ Environment variables in profiles.yml
+✅ Airflow Connections for API credentials
+✅ No hardcoded passwords in dbt models
+✅ .gitignore includes .env, *.local
+
+---
+
+## 📈 Future Enhancements
+
+- [ ] Implement incremental models for large fact tables
+- [ ] Add SCD Type 2 snapshots for slowly changing dimensions
+- [ ] Create dbt tests for data anomaly detection
+- [ ] Set up CI/CD pipeline for model validation
+- [ ] Implement data observability (Great Expectations)
+- [ ] Add cost optimization monitoring
+
+---
+
+## 🤝 Support
+
+For issues or questions:
+1. Check dbt logs: `dbt run --debug`
+2. Review test results: `dbt test`
+3. Check Airflow DAG logs in UI
+
+---
+
+**Last Updated**: 2025-03-22
+**Project Version**: 2.0 (with comprehensive documentation and testing)

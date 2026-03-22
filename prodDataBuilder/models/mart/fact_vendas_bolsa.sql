@@ -5,6 +5,9 @@ WITH vendasBolsa AS (
         crm.id_crm_cliente,
         crm.id_rds,
         fv.id_sede AS sede_venda,
+        -- Branch mapping logic: If auction was registered in branch 1 (central)
+        -- AND sale happened in branches 85 or 54 (regional offices),
+        -- then use the regional office ID; otherwise use auction branch
         CASE
             WHEN l.id_sede = 1 AND fv.id_sede IN (85, 54) THEN fv.id_sede
             ELSE l.id_sede
@@ -26,6 +29,9 @@ WITH vendasBolsa AS (
     INNER JOIN {{ ref('fact_vendas') }} fv
         ON c.id = fv.id_cliente
     WHERE fv.data_compra >= l.data_entrada
+      -- LEAD MATCHING WINDOW: 75 days
+      -- Sales within 75 days of auction entry are considered conversions from that auction
+      -- This window was determined by business analysis of historical lead-to-sale patterns
       AND fv.data_compra < l.data_entrada + INTERVAL '75 days'
 ),
 

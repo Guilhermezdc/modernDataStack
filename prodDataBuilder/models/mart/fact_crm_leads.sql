@@ -6,6 +6,10 @@
   )
 }}
 
+-- ACTION ID CLASSIFICATION
+-- This model tracks lead progression through defined action sequences:
+-- ACTION ENTRY (Entry points): 3=Contact Made, 9=Interested, 15=Qualified
+-- ACTION EXIT (Exit outcomes): 4=Lost, 8=Won, 22=Disputed
 {% set relevant_actions = [3,4,8,9,15,22] %}
 
 WITH fonte_logs AS (
@@ -30,6 +34,7 @@ passagens AS (
             ORDER BY l.data_log
         ) AS proxima_data_qualquer,
 
+        -- Find the first exit action (Lost=4, Won=8, Disputed=22) after each entry
         MIN(
             CASE WHEN s.id_acao IN (4,8,22) THEN s.data_log END
         ) OVER (
@@ -38,6 +43,7 @@ passagens AS (
             ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
         ) AS data_saida_raw,
 
+        -- Map exit action ID to readable status
         MIN(
             CASE
                 WHEN s.id_acao = 4 THEN 'Perdido'

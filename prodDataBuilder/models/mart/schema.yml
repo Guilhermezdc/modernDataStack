@@ -1,0 +1,252 @@
+version: 2
+
+models:
+  - name: fact_vendas
+    description: "Fact table of sales transactions with complete payment history. Contains both old model (model=5) and new model transactions, unified with transactional payment data."
+    meta:
+      owner: data-analytics
+      tags: [sales, transactions, core]
+    columns:
+      - name: id_processo
+        description: "Process ID - unique identifier for the sale process"
+        tests:
+          - unique
+          - not_null
+      - name: id_cliente
+        description: "Customer ID - foreign key to customer dimension"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_tb_clientes')
+              field: id
+      - name: id_servico
+        description: "Service ID - identifies the type of service purchased"
+        tests:
+          - not_null
+      - name: id_usuario_cadastro
+        description: "User ID of the person who registered the sale"
+        tests:
+          - not_null
+      - name: id_sede
+        description: "Branch/headquarters ID where the sale was processed"
+        tests:
+          - not_null
+      - name: data_compra
+        description: "Date of the sale transaction (payment completion date for new model, registration date for old model)"
+        tests:
+          - not_null
+      - name: id_origem
+        description: "Sales channel/origin ID"
+      - name: valor
+        description: "Transaction value in currency units"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+  - name: fact_crm_leads
+    description: "Fact table tracking CRM lead action history and conversion status. Records lead journey through system with action sequence and conversion outcomes (Lost/Won/Disputed)."
+    unique_key: chave_unica
+    meta:
+      owner: crm-team
+      tags: [crm, leads, conversion]
+    columns:
+      - name: id_crm_cliente
+        description: "CRM Client/Lead ID"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_tb_crm_clientes')
+              field: id
+      - name: acao_entrada
+        description: "CRM action name that triggered this lead record (e.g., 'Contact Made', 'Interested')"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Contato Feito', 'Interessado', 'Qualificado']
+      - name: data_entrada
+        description: "Timestamp when the action was recorded"
+        tests:
+          - not_null
+      - name: data_saida
+        description: "Timestamp when the lead outcome was determined (Lost, Won, or Disputed)"
+      - name: ordem_passagem
+        description: "Sequence number of this action in the lead's journey (1=first action)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true
+      - name: status
+        description: "Final status of the lead (Aberto=Open, Perdido=Lost, Conquistado=Won, Contestado=Disputed)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Aberto', 'Perdido', 'Conquistado', 'Contestado']
+      - name: chave_unica
+        description: "Unique key: concatenation of customer ID and action sequence number"
+        tests:
+          - unique
+          - not_null
+
+  - name: fact_leads_contestados
+    description: "Fact table of disputed/contested leads. Tracks complex dispute flows including shared lead cases, dispute details, and stage progression."
+    meta:
+      owner: disputes-team
+      tags: [disputes, leads, contested]
+    columns:
+      - name: id_lead
+        description: "Lead ID involved in the dispute"
+        tests:
+          - not_null
+      - name: id_lance
+        description: "Auction/bid ID associated with the disputed lead"
+      - name: data_contestacao
+        description: "Date when the dispute was filed"
+        tests:
+          - not_null
+      - name: motivo
+        description: "Reason/category for the dispute"
+      - name: status_contestacao
+        description: "Current status of the dispute (pending, resolved, escalated)"
+        tests:
+          - accepted_values:
+              values: ['pendente', 'resolvido', 'escalado']
+
+  - name: fact_leads_leiloados
+    description: "Fact table of leads that went through auction process. Contains auction lead details, winning bids, and associated values."
+    meta:
+      owner: auction-team
+      tags: [auction, leads, bids]
+    columns:
+      - name: id_lead
+        description: "Lead ID in the auction system"
+        tests:
+          - unique
+          - not_null
+      - name: data_lance
+        description: "Date of the auction bid/lance"
+        tests:
+          - not_null
+      - name: valor_lance
+        description: "Value of the winning bid in currency units"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+      - name: id_usuario_vencedor
+        description: "User ID of the auction winner"
+      - name: id_sede_vencedor
+        description: "Branch ID of the winning user"
+
+  - name: fact_vendas_bolsa
+    description: "Fact table matching auction leads to completed sales. Links leads that sold within the lead matching window after auction."
+    meta:
+      owner: sales-operations
+      tags: [auction, sales, matching]
+    columns:
+      - name: id_venda
+        description: "Sales transaction ID"
+        tests:
+          - unique
+          - not_null
+      - name: id_lead_bolsa
+        description: "Auction lead ID that was matched to this sale"
+        tests:
+          - not_null
+      - name: valor_venda
+        description: "Value of the completed sale"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+      - name: dias_apos_lance
+        description: "Number of days between auction date and sale completion"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+
+  - name: dim_crm_leads
+    description: "Dimension table of CRM leads/customers. Contains static customer attributes like name, contact info, and location."
+    meta:
+      owner: crm-team
+      tags: [crm, customers, dimension]
+    columns:
+      - name: id_crm_cliente
+        description: "Unique CRM customer ID (primary key)"
+        tests:
+          - unique
+          - not_null
+      - name: nome
+        description: "Customer full name (uppercase)"
+        tests:
+          - not_null
+      - name: sexo
+        description: "Customer gender (M/F/Other)"
+      - name: data_nascimento
+        description: "Customer date of birth"
+      - name: cpf
+        description: "Customer CPF (Brazilian personal tax ID)"
+      - name: cnpj
+        description: "Customer CNPJ (Brazilian business tax ID)"
+      - name: cep
+        description: "Customer CEP (Brazilian postal code)"
+      - name: cidade
+        description: "City where customer is located"
+      - name: bairro
+        description: "Neighborhood/district of the customer"
+      - name: endereco
+        description: "Street address of the customer"
+      - name: uf
+        description: "State (UF) where customer is located (uppercase)"
+      - name: numero
+        description: "Address number"
+      - name: telefone1
+        description: "Primary phone number"
+        tests:
+          - not_null
+      - name: email
+        description: "Customer email address (uppercase)"
+      - name: creatAt
+        description: "Record creation timestamp"
+        tests:
+          - not_null
+      - name: id_origem
+        description: "Lead source/origin code"
+      - name: id_rds
+        description: "RD Station CRM ID for this lead"
+
+  - name: agg_consultas_atrasadas
+    description: "Aggregation table of overdue/late inquiries. Tracks consultations that exceeded their deadline by service and branch."
+    meta:
+      owner: operations
+      tags: [aggregation, operations, monitoring]
+    columns:
+      - name: id_servico
+        description: "Service ID"
+        tests:
+          - not_null
+      - name: id_sede
+        description: "Branch ID"
+        tests:
+          - not_null
+      - name: data_consulta
+        description: "Consultation/inquiry date"
+        tests:
+          - not_null
+      - name: dias_atraso
+        description: "Number of days the consultation was overdue"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+      - name: quantidade_atrasadas
+        description: "Count of overdue consultations by date/service/branch"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true

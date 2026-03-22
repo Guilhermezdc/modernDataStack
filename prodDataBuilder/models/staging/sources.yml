@@ -57,21 +57,21 @@ sources:
           - name: desconto_servico_adm
             description: "Porcentagem máxima de desconto"
           - name: desconto_servico_col
-            description: ""
+            description: "Maximum discount percentage for collaborative processing"
           - name: desconto_servico_adm_bh
-            description: ""
+            description: "Maximum discount percentage for Belo Horizonte administrative"
           - name: desconto_servico_adm_sg
-            description: ""
+            description: "Maximum discount percentage for administrative region SG"
           - name: desconto_servico_adm_siga
-            description: ""
+            description: "Maximum discount percentage for SIGA administrative system"
           - name: prazo_max_limite
-            description: "Intervalo máximo de consulta por dia"
+            description: "Maximum interval for consultation per day (in days)"
           - name: exibiremfiltros
-            description: ""
+            description: "Boolean flag to show service in filter displays"
           - name: campos
-            description: ""
+            description: "Serialized JSON field configuration for service display"
           - name: status_servicos
-            description: ""
+            description: "Service status code (active/inactive/discontinued)"
           - name: bloquear_cadastro_intempestivo
             description: "Booleano para verificar se o usuario pode cadastrar processo com data limite abaixo do dia atual"
 
@@ -99,9 +99,9 @@ sources:
           - name: abreviacao
             description: "Abreviação do nome da sede"
           - name: legenda
-            description: ""
+            description: "Legend label for branch display and identification"
           - name: limite_vt
-            description: ""
+            description: "Vehicle transportation maximum capacity or limit"
           - name: cnpj
             description: "CNPJ da sede"
           - name: id_sede_status
@@ -111,13 +111,13 @@ sources:
           - name: cep
             description: "CEP da sede"
           - name: cep_fim
-            description: ""
+            description: "Final CEP code in the geographic range for this branch"
           - name: cep_inicio
-            description: ""
+            description: "Initial CEP code in the geographic range for this branch"
           - name: latitude
-            description: ""
+            description: "Geographic latitude coordinate for the branch location"
           - name: longitude
-            description: ""
+            description: "Geographic longitude coordinate for the branch location"
           - name: data_inicio_contrato
             description: "Data do inicio do contrato com a SÓ Multas"
           - name: data_inicio_operacao
@@ -153,11 +153,11 @@ sources:
           - name: id_sede
             description: "ID da sede"
           - name: visualizacao_dados
-            description: ""
+            description: "User permission level or flag for data visualization access"
           - name: id_usuario
             description: "ID do usuario que cadastro essa função"
           - name: sync_atualizacao
-            description: ""
+            description: "Timestamp of the last function update synchronization"
           - name: sync_criacao
             description: "Data da criação da função"
           - name: cnpj
@@ -173,21 +173,21 @@ sources:
           - name: descricao
             description: "Descrição da função"
           - name: cep
-            description: ""
+            description: "CEP code associated with this function group"
           - name: "cep_inicio"
-            description: ""
+            description: "Initial CEP code in the geographic range for this function"
           - name: "cep_fim"
-            description: ""
+            description: "Final CEP code in the geographic range for this function"
           - name: latitude
-            description: ""
+            description: "Geographic latitude coordinate associated with this function"
           - name: longitude
-            description: ""
+            description: "Geographic longitude coordinate associated with this function"
           - name: status
             description: "Status da função"
           - name: cep_cliente
-            description: ""
+            description: "CEP code of the associated customer"
           - name: cidade_contrato
-            description: ""
+            description: "City specified in the contract agreement for this function"
 
       - name: tb_usuarios
         description: "Tabela com todos os usuarios do SisSM"
@@ -362,9 +362,9 @@ sources:
           - name: id_estado
             description: "ID do estado correspondente do orgão"
           - name: id_tipo
-            description: ""
+            description: "ID of the organ type classification"
           - name: status
-            description: ""
+            description: "Status code indicating if the organ is active or inactive"
 
       - name: tb_crm_log_clientes
         description: "Tabela de logs de leads no CRM"
@@ -441,11 +441,11 @@ sources:
           - name: estado
             description: "Estado de origem do lead"
           - name: id_user
-            description: ""
+            description: "ID of the user who placed the auction bid"
           - name: ci_autuacao
             description: "TAG que o lead foi leiloado"
           - name: id_sede
-            description: ""
+            description: "ID of the branch associated with this auction lead"
           - name: id_crm
             description: "ID crm do lead"
             tests:
@@ -487,7 +487,7 @@ sources:
           - name: tipo_lead
             description: "Origem do lead"
           - name: id_status
-            description: ""
+            description: "ID of the status for the winning auction bid"
           - name: id_crm_cliente
             description: "ID lead no crm"
             tests:
@@ -506,7 +506,7 @@ sources:
           - name: valor_oferta
             description: "Valor ofertado no lance"
           - name: data_oferta
-            description: ""
+            description: "Date and time when the auction bid was submitted"
           - name: id_usuario
             description: "id do usuario que deu o lance"
           - name: id_lance

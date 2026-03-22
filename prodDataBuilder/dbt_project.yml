@@ -31,7 +31,7 @@ clean-targets:         # directories to be removed by `dbt clean`
 seeds:
   prodDataBuilder:
     dim_log_acoes:
-      quote_columns: true
+      +quote_columns: true
       +schema: mart
 
 models:

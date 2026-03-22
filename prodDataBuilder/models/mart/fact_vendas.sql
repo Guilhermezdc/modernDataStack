@@ -1,6 +1,13 @@
 {{ config(materialized='table') }}
 
+-- Fact table combining two different business model approaches for sales data
+-- OLD MODEL (id_modelo = 5): Uses registration date, includes all non-canceled processes
+-- NEW MODEL (id_modelo != 5): Uses payment transaction date for more accurate sales timing
+
 WITH vendas_modelo_antigo AS (
+    -- OLD MODEL SALES: Process registration-based
+    -- Includes all seats using the legacy model (status=5) or transitioned seats
+    -- Time period: Before model change OR during transition period
     SELECT
         p.id,
         p.id_cliente,
@@ -34,6 +41,7 @@ WITH vendas_modelo_antigo AS (
 ),
 
 agrupamentos_transacao AS (
+    -- Transaction data from grouped processes
     SELECT
         pa.id_processo,
         t.status,
@@ -44,6 +52,7 @@ agrupamentos_transacao AS (
 ),
 
 processo_unico_transacao AS (
+    -- Single process transactions (bypassing grouping)
     SELECT
         id_processo,
         status,
@@ -54,12 +63,15 @@ processo_unico_transacao AS (
 ),
 
 transacao_full_raw AS (
+    -- Combine both transaction types (grouped and single)
     SELECT * FROM agrupamentos_transacao
     UNION ALL
     SELECT * FROM processo_unico_transacao
 ),
 
 transacao_full AS (
+    -- Get the first (earliest) payment transaction per process
+    -- This represents the actual sale completion date for new model
     SELECT
         id_processo,
         data_criacao_transacao
@@ -75,6 +87,8 @@ transacao_full AS (
 ),
 
 vendas_modelo_novo AS (
+    -- NEW MODEL SALES: Payment transaction-based
+    -- Uses actual payment date for new model seats (transitioned after model change date)
     SELECT
         p.id,
         p.id_cliente,
@@ -107,12 +121,14 @@ vendas_modelo_novo AS (
 ),
 
 vendas_completo AS (
+    -- Combine both models
     SELECT * FROM vendas_modelo_antigo
     UNION ALL
     SELECT * FROM vendas_modelo_novo
 ),
 
 vendas_unicas AS (
+    -- Remove duplicates: keep only first occurrence per process
     SELECT *,
         ROW_NUMBER() OVER (PARTITION BY id ORDER BY data_cadastro ASC) AS rn
     FROM vendas_completo

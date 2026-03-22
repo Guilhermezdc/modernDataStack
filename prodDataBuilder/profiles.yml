@@ -3,21 +3,21 @@ prodDataBuilder:
   outputs:
     dev:
       type: postgres
-      host: "locahost"
-      user: "root"
-      password: "2skj(Hk2hksf2"
+      host: "{{ env_var('DBT_HOST', 'localhost') }}"
+      user: "{{ env_var('DBT_USER', 'root') }}"
+      password: "{{ env_var('DBT_PASSWORD') }}"
       port: 5432
-      dbname: "analytics"
-      schema: ""   # <- destino padrão (transformações)
+      dbname: "{{ env_var('DBT_DBNAME', 'analytics') }}"
+      schema: "{{ env_var('DBT_SCHEMA_DEV', 'staging') }}"
       threads: 4
       keepalives_idle: 0
 
     prod:
       type: postgres
-      host: "localhost"
-      user: "root"
-      password: "2skj(Hk2hksf2"
+      host: "{{ env_var('DBT_HOST', 'localhost') }}"
+      user: "{{ env_var('DBT_USER', 'root') }}"
+      password: "{{ env_var('DBT_PASSWORD') }}"
       port: 5432
-      dbname: "analytics"
-      schema: ''  # <- idem
+      dbname: "{{ env_var('DBT_DBNAME', 'analytics') }}"
+      schema: "{{ env_var('DBT_SCHEMA_PROD', 'mart') }}"
       threads: 8
